@@ -223,16 +223,17 @@ class CliInterface(metaclass=MetaInterface):
 
     def remove(self):
         try:
-            title = self.params['-t']
+            title_org = self.params['-t']
+            title = sanitize_entry(title_org)
             self.model.execute(f"DELETE FROM {self.model.name} WHERE title='{title}'")
-            self.logger.success(f"Sticky `{title}` was removed successfully")
+            self.logger.success(f"Sticky `{title_org}` was removed successfully")
         except KeyError:
             self.logger.error(HelpTags.help_remove.value)
 
     def edit(self):
         date_edited = datetime.datetime.now().strftime("%d/%m/%Y")
         try:
-            title = self.params['-t']
+            title = sanitize_entry(self.params['-t'])
             cols = self.params.copy()
 
             del cols['-t']
@@ -269,23 +270,25 @@ class CliInterface(metaclass=MetaInterface):
 
     def set_done(self):
         try:
-            title = self.params['-t']
+            title_org = self.params['-t']
+            title = sanitize_entry(title_org)
             if not self.model.select('title', f"'{title}'"):
                 self.logger.info(f"There is no sticky with the name `{title}`")
                 return
             self.model.edit('done=1', f"title='{title}'")
-            self.logger.success(f"Sticky `{title}` is set to `done`")
+            self.logger.success(f"Sticky `{title_org}` is set to `done`")
         except KeyError:
             self.logger.error(HelpTags.help_set_done.value)
 
     def set_undone(self):
         try:
-            title = self.params['-t']
+            title_org = self.params['-t']
+            title = sanitize_entry(title_org)
             if not self.model.select('title', f"'{title}'"):
                 self.logger.info(f"There is no sticky with the name `{title}`")
                 return
             self.model.edit('done=0', f"title='{title}'")
-            self.logger.success(f"Sticky `{title}` is set to `un-done`")
+            self.logger.success(f"Sticky `{title_org}` is set to `un-done`")
         except KeyError:
             self.logger.error(HelpTags.help_set_undone.value)
 

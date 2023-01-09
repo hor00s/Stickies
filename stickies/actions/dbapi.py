@@ -43,3 +43,12 @@ def sort_by(sort_method: str, stickies: DB_VALUES, reversed: bool) -> str:
 
 def sanitize_entry(entry: str) -> str:
     return entry.strip().replace("'", "''")
+
+
+def sanitize_command(word: str, chars: tuple = ('`',)):
+    fixed = []
+    for i in word:
+        if i in chars:
+            fixed.append('\\')
+        fixed.append(i)
+    return ''.join(fixed)

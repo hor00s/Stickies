@@ -1,6 +1,5 @@
 import unittest
 from models import Model
-from pathlib import Path
 from .note import (
     Note,
     NoteCreationError,
@@ -16,24 +15,24 @@ class TestNote(unittest.TestCase):
     def test_content_len_setter(self):
         content = 'a' * Note.MAX_CONTENT_LEN + 'a'
         with self.assertRaises(NoteCreationError):
-            _note = Note('title', content, 3)
+            _ = Note('title', content, 3)
         content = content[:-1]
-        note = Note('title', content, 3)
+        _ = Note('title', content, 3)
 
     def test_title_setter(self):
         title = 'a' * Note.MAX_TITLE_LEN + 'a'
         with self.assertRaises(NoteCreationError):
-            _note = Note(title, 'content', 3)
+            _ = Note(title, 'content', 3)
 
         title = title[:-1]
-        note = Note('content', title, 3)
+        _ = Note('content', title, 3)
 
     def test_priority_setter(self):
         priority = Note.MAX_PRIORITY + 1
         with self.assertRaises(NoteCreationError):
-            _note = Note('content', 'title', priority)
+            _ = Note('content', 'title', priority)
         priority = Note.MAX_PRIORITY
-        note = Note('content', 'title', priority)
+        _ = Note('content', 'title', priority)
 
     def test_set_date(self):
         self.assertEqual(self.note.date_created, self.note.date_edited)
@@ -49,9 +48,10 @@ class TestNote(unittest.TestCase):
         )
         row = self.model.fetch_last()
         row_id = self.model.filter_row(row, 'id')
-        expected = [(self.note.title, self.note.content, self.note.priority, self.note.date_created, self.note.date_edited, self.note.done, row_id)]
+        expected = [(self.note.title, self.note.content, self.note.priority,
+                    self.note.date_created, self.note.date_edited, self.note.done, row_id)]
         self.assertEqual(row, expected)
-        
+
         self.model.delete('title', self.note.title)
         self.assertEqual(len(self.model.fetch_all()), 0)
 

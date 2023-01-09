@@ -11,12 +11,15 @@ from notes.note import Note
 from datetime import datetime as dt
 from actions.constants import LabelColor, get_icon
 from PyQt5 import uic, QtGui
+from PyQt5.QtGui import QFont
+from actions.constants import VERSIONS
 from actions.dbapi import (
     DB_ROW,
     FIELDS,
     DB_VALUES,
     sort_by,
     sanitize_entry,
+    sanitize_command,
 )
 from PyQt5.QtCore import (
     Qt,
@@ -46,6 +49,8 @@ class Stickies(QMainWindow):
                  configs: jsonwrapper.Handler) -> None:
         super(Stickies, self).__init__()
         uic.loadUi(Stickies.UIFILE, self)
+        self.setWindowIcon(QtGui.QIcon(get_icon['Sticky']))
+        self.setWindowTitle(f"Stickies v{VERSIONS[-1]}")
 
         # Utils
         self.logger = logger
@@ -177,7 +182,7 @@ class Stickies(QMainWindow):
             up_btn.setEnabled(True)
 
     def _make_command(self, flags: str):
-        os.system(f"./stickies.py {flags}")
+        os.system(f"./stickies.py {sanitize_command(flags)}")
 
     def _get_title_from_item(self, list_item) -> str:
         exlude = len("Title: ")
@@ -185,13 +190,13 @@ class Stickies(QMainWindow):
         title = item_text.split(Stickies.VIEW_SEPERATOR)[0][exlude:]
         return title
 
-    def _info_label(self, header: str, msg: str, rgb: tuple[int], seconds: int = 3):
+    def _info_label(self, header: str, msg: str, rgb: tuple[int], label: QLabel, seconds: int = 3):
         r, g, b = rgb
-        self.info_lbl.setStyleSheet(f"color: rgb({r}, {g}, {b});")
-        self.info_lbl.setText(f"[{header.upper()}]: {msg}")
+        label.setStyleSheet(f"color: rgb({r}, {g}, {b});")
+        label.setText(f"[{header.upper()}]: {msg}")
         time.sleep(seconds)
-        self.info_lbl.setText('')
-        self.info_lbl.setStyleSheet("")
+        label.setText('')
+        label.setStyleSheet("")
 
     def _add_stickie_fields(self, stickies: DB_VALUES)\
             -> Generator[DB_ROW, None, None]:
@@ -235,10 +240,31 @@ class Stickies(QMainWindow):
                 config_value.addItem(str(value))
             config_value.setCurrentText(str(self.configs.get(key)))
 
+        def save_changes(config):
+            key = config_key.currentText()
+            value = config_value.currentText()
+            config.edit(
+                key,
+                value,
+                int if config_value.currentText().isnumeric() else str,
+            )
+            info_font = QFont("Times New Roman", 13)
+            info_font.setBold(True)
+            info_lbl.setFont(info_font)
+            info_lbl.setWordWrap(True)
+
+            self.info_label(
+                'SUCCESS', f"`{key.title()}` has been set to `{value}`",
+                LabelColor.SUCCESS.value,
+                info_lbl,
+            )
+
         assert len(self.configs.read()) == 2, "Unhandled setting"
         height, width = 300, 300
         layout = QVBoxLayout()
         dialog = QDialog()
+        info_lbl = QLabel(dialog)
+
         dialog.setWindowTitle("Edit settings")
         dialog.setLayout(layout)
         dialog.setFixedSize(QSize(height, width))
@@ -246,11 +272,7 @@ class Stickies(QMainWindow):
         ok_btn = QPushButton(dialog, text="Ok")
 
         ok_btn.clicked.connect(
-            lambda: self.configs.edit(
-                config_key.currentText(),
-                config_value.currentText(),
-                int if config_value.currentText().isnumeric() else str,
-            )
+            lambda: save_changes(self.configs)
         )
 
         config_value = QComboBox(dialog)
@@ -266,15 +288,17 @@ class Stickies(QMainWindow):
 
         for key in settings:
             config_key.addItem(key)
+
         set_values(config_key, config_value)
         layout.addWidget(ok_btn)
+        layout.addWidget(info_lbl)
 
         dialog.exec_()
         self._refresh_list()
 
-    def info_label(self, header: str, msg: str, rgb: tuple[int], seconds: int = 3):
+    def info_label(self, header: str, msg: str, rgb: tuple[int], label: QLabel, seconds: int = 3):
         (
-            thr.Thread(target=self._info_label, args=(header, msg, rgb, seconds))
+            thr.Thread(target=self._info_label, args=(header, msg, rgb, label, seconds))
             .start()
         )
 
@@ -291,7 +315,8 @@ class Stickies(QMainWindow):
     def save(self):
         title = self.title_ln.text()
         if not title:
-            self.info_label("WARNING", "Title cannon be empty", LabelColor.ERROR.value)
+            msg = "Title cannon be empty"
+            self.info_label("WARNING", msg, LabelColor.ERROR.value, self.info_lbl)
         else:
             exists = self.model.execute(
                 f"SELECT * FROM {self.model.name} WHERE\
@@ -306,11 +331,12 @@ class Stickies(QMainWindow):
                          {int(self.priority_ln.text())}'
                 )
                 msg = f"Sticky `{title}` has been edited"
-                self.info_label("edit", msg, LabelColor.SUCCESS.value)
+                self.info_label("edit", msg, LabelColor.SUCCESS.value, self.info_lbl)
             else:
                 flags = f'add -t "{title}" -c "{content}" -p {priority}'
                 self._make_command(flags)
-                self.info_label('new', f"Sticky `{title}` is now added", LabelColor.SUCCESS.value)
+                msg = f"Sticky `{title}` is now added"
+                self.info_label('new', msg, LabelColor.SUCCESS.value, self.info_lbl)
 
         self._refresh_list()
         self.title_ln.setText('')
@@ -346,7 +372,7 @@ class Stickies(QMainWindow):
         self._make_command(flags)
         self._refresh_list()
         msg = "All items marked as `done` have been removed"
-        self.info_label("info", msg, LabelColor.INFO.value)
+        self.info_label("info", msg, LabelColor.INFO.value, self.info_lbl)
 
     def delete_all(self):
         flags = 'purge_all'
@@ -359,18 +385,24 @@ class Stickies(QMainWindow):
             title = self._get_title_from_item(self.stickies_view.currentItem())
             self._make_command(f'remove -t "{title}"')
             self._refresh_list()
-            self.info_label("delete", f"Sticky `{title}` has been removed", LabelColor.INFO.value)
+            msg = f"Sticky `{title}` has been removed"
+            self.info_label("info", msg, LabelColor.WARNING.value, self.info_lbl)
         elif not exists:
-            self.info_label("info", "You have no active selection", LabelColor.WARNING.value)
+            msg = "You have no active selection"
+            self.info_label("info", msg, LabelColor.ERROR.value, self.info_lbl)
         else:
-            self.info_label("succes", "Oops. Something went wrong", LabelColor.ERROR.value)
+            msg = "Oops. Something went wrong"
+            self.info_label("succes", msg, LabelColor.ERROR.value, self.info_lbl)
 
     def edit(self):
         exists = self.stickies_view.selectedItems()
         if exists:
             title = self._get_title_from_item(self.stickies_view.currentItem())
-            title, content, priority, *_ = self.model.select('title',
-                                                             f"'{title}'")[0]
+            title, content, priority, *_ = self.model.select(
+                'title',
+                f"'{sanitize_entry(title)}'"
+            )[0]
+
             self.title_ln.setText(title)
             self.content_ln.setText(content)
             self.priority_ln.setText(str(priority))
@@ -381,11 +413,14 @@ class Stickies(QMainWindow):
                 self.priority_down_btn
             )
 
-            self.info_label("info", f"Sticky `{title}` is being edited", LabelColor.INFO.value)
+            msg = f"Sticky `{title}` is being edited"
+            self.info_label("info", msg, LabelColor.INFO.value, self.info_lbl)
         elif not exists:
-            self.info_label("info", "You have no active selection", LabelColor.WARNING.value)
+            msg = "You have no active selection"
+            self.info_label("info", msg, LabelColor.WARNING.value, self.info_lbl)
         else:
-            self.info_label("succes", "Oops. Something went wrong", LabelColor.ERROR.value)
+            msg = "Oops. Something went wrong"
+            self.info_label("succes", msg, LabelColor.ERROR.value, self.info_lbl)
 
     def change_done_status(self, is_done: bool):
         if self.stickies_view.selectedItems():
@@ -393,14 +428,16 @@ class Stickies(QMainWindow):
             if is_done:
                 self._make_command(f'set_done -t "{title}"')
             elif not is_done:
-                self._make_command(f'set_undone -t {title}')
+                self._make_command(f'set_undone -t "{title}"')
             self._refresh_list()
             msg = f"Status of `{title}` has beed changed!"
-            self.info_label("success", msg, LabelColor.SUCCESS.value)
-        elif not is_done:
-            self.info_label("info", "You have no active selection", LabelColor.WARNING.value)
+            self.info_label("success", msg, LabelColor.SUCCESS.value, self.info_lbl)
+        elif not self.stickies_view.selectedItems():
+            msg = "You have no active selection"
+            self.info_label("info", msg, LabelColor.WARNING.value, self.info_lbl)
         else:
-            self.info_label("info", "Oops. Something went wrong", LabelColor.ERROR.value)
+            msg = "Oops. Something went wrong"
+            self.info_label("info", msg, LabelColor.ERROR.value, self.info_lbl)
 
     def handle_search_query(self):
         self._clear_selections()

@@ -15,3 +15,6 @@ os.chdir(BASE_DIR)
 
 ICONS = os.listdir(Path(f"{BASE_DIR}/icons"))
 get_icon = {f"{icon[:icon.index('.')]}": str(Path(f"{BASE_DIR}/icons/{icon}")) for icon in ICONS}
+VERSIONS = (
+    '1.0',
+)
