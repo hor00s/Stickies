@@ -39,6 +39,7 @@ from PyQt5.QtWidgets import (
     QLabel,
 )
 
+
 # TODO: Make search_lbl wider
 class Stickies(QMainWindow):
     UIFILE = Path('window/untitled.ui')
@@ -117,7 +118,7 @@ class Stickies(QMainWindow):
         self.content_lbl = self.findChild(QLabel, 'content_lbl')
         self.priority_lbl = self.findChild(QLabel, 'priority_lbl')
         self.info_lbl = self.findChild(QLabel, 'info_lbl')
-        
+
         self.search_lbl = self.findChild(QLabel, 'search_lbl')
         self._update_search_lbl()
 
@@ -163,7 +164,7 @@ class Stickies(QMainWindow):
 
     def _refresh_list(self):
         """Empties the whole list of stickies and reloads them
-        """        
+        """
         self.stickies_view.clear()
         self.load_stickies(self.model.fetch_all())
 
@@ -182,7 +183,7 @@ class Stickies(QMainWindow):
         :type list_item: QListItem
         :return: Title
         :rtype: str
-        """        
+        """
         exlude = len("Title: ")
         item_text = list_item.text()
         title = item_text.split(Stickies.VIEW_SEPERATOR)[0][exlude:]
@@ -205,7 +206,7 @@ class Stickies(QMainWindow):
 
         :yield: A Sticky with its according labels
         :rtype: DB_ROW
-        """        
+        """
         other = []
         for sticky in stickies:
             temp = map(
@@ -241,7 +242,7 @@ class Stickies(QMainWindow):
     def view_settings(self):
         """Create a string with the saved configurations and display them
         in a seperate MessageBox
-        """        
+        """
         msg = '\n'.join(
             map(lambda i: f"{i[0]}:\t{i[1]}", self.configs.read().items())
         )
@@ -311,7 +312,7 @@ class Stickies(QMainWindow):
         set_values(config_key, config_value)
         layout.addWidget(ok_btn)
         layout.addWidget(info_lbl)
-        
+
         dialog.exec_()
         self._update_search_lbl()
         self._refresh_list()
@@ -337,7 +338,7 @@ class Stickies(QMainWindow):
 
     def load_stickies(self, stickies: DB_VALUES):
         """Loads all the saved stickies from the db and adds the to the GUI
-        """        
+        """
         stickies = self._sort_stickies(stickies)
         stickies = self._add_stickie_fields(stickies)
 
@@ -348,7 +349,7 @@ class Stickies(QMainWindow):
 
     def save(self):
         """Takes all the input fields from the user and saves them in the db
-        """        
+        """
         title = self.title_ln.text()
         if not title:
             msg = "Title cannon be empty"
@@ -494,6 +495,7 @@ class Stickies(QMainWindow):
                 self.stickies_view.addItem(f"<Nothing found matching `{query}`>")
         else:
             self._refresh_list()
+
 
 def gui(args: list, logger: logger.Logger, model: models.Model,
         configs: jsonwrapper.Handler) -> int:
