@@ -9,7 +9,12 @@ from jsonwrapper import Handler
 from actions.constants import BASE_DIR
 
 
-config = {'quiet': 1, 'sort_by': 'priority'}
+config = {
+    'quiet': 1,
+    'sort_by': 'priority',
+    'search_by': 'title',
+}
+
 configs = Handler(Path(f"{BASE_DIR}/.config.json"), config)
 configs.init()
 

@@ -8,7 +8,7 @@ import threading as thr
 from typing import Generator
 from pathlib import Path
 from notes.note import Note
-from datetime import datetime as dt
+from typing import Literal
 from actions.constants import LabelColor, get_icon
 from PyQt5 import uic, QtGui
 from PyQt5.QtGui import QFont
@@ -39,7 +39,7 @@ from PyQt5.QtWidgets import (
     QLabel,
 )
 
-
+# TODO: Make search_lbl wider
 class Stickies(QMainWindow):
     UIFILE = Path('window/untitled.ui')
     VIEW_SEPERATOR = '\n'
@@ -64,15 +64,10 @@ class Stickies(QMainWindow):
         self._load_lists()
 
         # Set up
-        self.load_stickies()
+        self.load_stickies(self.model.fetch_all())
         self.priority_ln.setReadOnly(True)
         self.priority_ln.setText('1')
         self.stickies_view.setSelectionMode(3)  # 3 -> ExtendedSelection
-        self._disable_priority_direction_btn(
-            int(self.priority_ln.text()),
-            self.priority_up_btn,
-            self.priority_down_btn
-        )
         self.search_ln.textChanged.connect(self.handle_search_query)
 
         self.title_ln.setMaxLength(Note.MAX_TITLE_LEN)
@@ -122,7 +117,9 @@ class Stickies(QMainWindow):
         self.content_lbl = self.findChild(QLabel, 'content_lbl')
         self.priority_lbl = self.findChild(QLabel, 'priority_lbl')
         self.info_lbl = self.findChild(QLabel, 'info_lbl')
+        
         self.search_lbl = self.findChild(QLabel, 'search_lbl')
+        self._update_search_lbl()
 
         self.title_lbl.setStyleSheet(label_style)
         self.content_lbl.setStyleSheet(label_style)
@@ -165,32 +162,36 @@ class Stickies(QMainWindow):
         self.refresh_btn.setIcon(QtGui.QIcon(get_icon['refresh']))
 
     def _refresh_list(self):
+        """Empties the whole list of stickies and reloads them
+        """        
         self.stickies_view.clear()
-        self.load_stickies()
+        self.load_stickies(self.model.fetch_all())
 
-    def _disable_priority_direction_btn(self, current_priority: int,
-                                        up_btn: QPushButton,
-                                        down_btn: QPushButton):
-        if current_priority == 1:
-            down_btn.setEnabled(False)
-        else:
-            down_btn.setEnabled(True)
-
-        if current_priority == 5:
-            up_btn.setEnabled(False)
-        else:
-            up_btn.setEnabled(True)
+    def _update_search_lbl(self):
+        label = "Search:"
+        self.search_lbl.setText(f"{label} ({self.configs.get('search_by')})")
 
     def _make_command(self, flags: str):
         os.system(f"./stickies.py {sanitize_command(flags)}")
 
     def _get_title_from_item(self, list_item) -> str:
+        """By parsing the text of a sticky as it's represented in the list,
+        this function extracts the title ONLY
+
+        :param list_item: A list item
+        :type list_item: QListItem
+        :return: Title
+        :rtype: str
+        """        
         exlude = len("Title: ")
         item_text = list_item.text()
         title = item_text.split(Stickies.VIEW_SEPERATOR)[0][exlude:]
         return title
 
     def _info_label(self, header: str, msg: str, rgb: tuple[int], label: QLabel, seconds: int = 3):
+        """Interface for self.info_label. DO NOT USE DIRECTLY.
+        It'll freeze the GUI
+        """
         r, g, b = rgb
         label.setStyleSheet(f"color: rgb({r}, {g}, {b});")
         label.setText(f"[{header.upper()}]: {msg}")
@@ -200,6 +201,11 @@ class Stickies(QMainWindow):
 
     def _add_stickie_fields(self, stickies: DB_VALUES)\
             -> Generator[DB_ROW, None, None]:
+        """Visually add the type of each thing a sticky stores.
+
+        :yield: A Sticky with its according labels
+        :rtype: DB_ROW
+        """        
         other = []
         for sticky in stickies:
             temp = map(
@@ -209,11 +215,14 @@ class Stickies(QMainWindow):
             other.append(list(temp))
         yield from other
 
-    def _get_date(self, date: str):
-        return dt.strptime(date, '%d/%m/%Y')
-
     def _sort_stickies(self, stickies: DB_VALUES)\
             -> Generator[DB_ROW, None, None]:
+        """This function re-orders the stickies to the way that
+        is configed by the user
+
+        :yield: The stickies row by row
+        :rtype: DB_ROW
+        """
         sort_method = self.configs.get('sort_by')
 
         sorted_stickies = stickies
@@ -221,18 +230,27 @@ class Stickies(QMainWindow):
         yield from sort_by(sort_method, sorted_stickies, reversed)
 
     def _clear_selections(self):
+        """Set the color of the stickies as QListItems back to the
+        default (black)
+        """
         self.stickies_view.selectedItems()
         for i in range(self.stickies_view.count()):
             current_item = self.stickies_view.item(i)
             current_item.setForeground(Qt.GlobalColor.black)
 
     def view_settings(self):
+        """Create a string with the saved configurations and display them
+        in a seperate MessageBox
+        """        
         msg = '\n'.join(
             map(lambda i: f"{i[0]}:\t{i[1]}", self.configs.read().items())
         )
         QMessageBox.information(self, 'Info', msg)
 
     def edit_settings(self):
+        """Opens the `Edit` window and hanldles any changes
+        that need to be made in the config file
+        """
         def set_values(config_key, config_value):
             config_value.clear()
             key = config_key.currentText()
@@ -259,7 +277,7 @@ class Stickies(QMainWindow):
                 info_lbl,
             )
 
-        assert len(self.configs.read()) == 2, "Unhandled setting"
+        assert len(self.configs.read()) == 3, "Unhandled setting"
         height, width = 300, 300
         layout = QVBoxLayout()
         dialog = QDialog()
@@ -284,6 +302,7 @@ class Stickies(QMainWindow):
         settings = {
             'quiet': range(1, Note.MAX_PRIORITY + 1),
             'sort_by': FIELDS,
+            'search_by': FIELDS,
         }
 
         for key in settings:
@@ -292,18 +311,33 @@ class Stickies(QMainWindow):
         set_values(config_key, config_value)
         layout.addWidget(ok_btn)
         layout.addWidget(info_lbl)
-
+        
         dialog.exec_()
+        self._update_search_lbl()
         self._refresh_list()
 
     def info_label(self, header: str, msg: str, rgb: tuple[int], label: QLabel, seconds: int = 3):
+        """Shows a message at a given label for `x` ammount of seconds
+
+        :param header: The header of the message [HEADER]: ...
+        :type header: str
+        :param msg: The message to be written [...]: msg
+        :type msg: str
+        :param rgb: The color that the msg will be displayed
+        :type rgb: tuple[int]
+        :param label: The label that the message will be displayed by
+        :type label: QLabel
+        :param seconds: The time that the msg will be shown for, defaults to 3
+        :type seconds: int, optional
+        """
         (
             thr.Thread(target=self._info_label, args=(header, msg, rgb, label, seconds))
             .start()
         )
 
-    def load_stickies(self):
-        stickies: DB_VALUES = self.model.fetch_all()
+    def load_stickies(self, stickies: DB_VALUES):
+        """Loads all the saved stickies from the db and adds the to the GUI
+        """        
         stickies = self._sort_stickies(stickies)
         stickies = self._add_stickie_fields(stickies)
 
@@ -313,6 +347,8 @@ class Stickies(QMainWindow):
             )
 
     def save(self):
+        """Takes all the input fields from the user and saves them in the db
+        """        
         title = self.title_ln.text()
         if not title:
             msg = "Title cannon be empty"
@@ -342,30 +378,33 @@ class Stickies(QMainWindow):
         self.title_ln.setText('')
 
     def cancel(self):
+        """Resets all the input fields
+        """
         self.priority_ln.setText('1')
-        self._disable_priority_direction_btn(
-            int(self.priority_ln.text()),
-            self.priority_up_btn,
-            self.priority_down_btn
-        )
-
         inputs = (self.title_ln, self.content_ln)
+
         for input in inputs: input.setText('')
 
-    def set_priority(self, direction: str):
-        line = self.priority_ln.text()
-        if direction == 'up' and int(line) < Note.MAX_PRIORITY:
-            next_num = int(line) + 1
-            self.priority_ln.setText(str(next_num))
-        elif direction == 'down' and int(line) > 1:
-            prev_num = int(line) - 1
-            self.priority_ln.setText(str(prev_num))
+    def set_priority(self, direction: Literal['up', 'down']):
+        """Handles the `priority` field
 
-        self._disable_priority_direction_btn(
-            int(self.priority_ln.text()),
-            self.priority_up_btn,
-            self.priority_down_btn
-        )
+        :param direction: Wheather we're adding or substracting for the field
+        :type direction: str
+        """
+        assert direction in ('up', 'down'), f"Invalid direction `{direction}`"
+        line = int(self.priority_ln.text())
+
+        if direction == 'up' and line < Note.MAX_PRIORITY:
+            next_num = line + 1
+            self.priority_ln.setText(str(next_num))
+        elif direction == 'up' and line + 1 > Note.MAX_PRIORITY:
+            self.priority_ln.setText('1')
+
+        elif direction == 'down' and line > 1:
+            prev_num = line - 1
+            self.priority_ln.setText(str(prev_num))
+        elif direction == 'down' and line - 1 < 1:
+            self.priority_ln.setText('5')
 
     def delete_done(self):
         flags = 'clear_done'
@@ -395,6 +434,10 @@ class Stickies(QMainWindow):
             self.info_label("succes", msg, LabelColor.ERROR.value, self.info_lbl)
 
     def edit(self):
+        """Fill the inputs fields with the selected sticky.
+        This function will overwrite a sticky if the title is un-changed.
+        Otherwise it'll just create a new one
+        """
         exists = self.stickies_view.selectedItems()
         if exists:
             title = self._get_title_from_item(self.stickies_view.currentItem())
@@ -406,13 +449,6 @@ class Stickies(QMainWindow):
             self.title_ln.setText(title)
             self.content_ln.setText(content)
             self.priority_ln.setText(str(priority))
-
-            self._disable_priority_direction_btn(
-                int(self.priority_ln.text()),
-                self.priority_up_btn,
-                self.priority_down_btn
-            )
-
             msg = f"Sticky `{title}` is being edited"
             self.info_label("info", msg, LabelColor.INFO.value, self.info_lbl)
         elif not exists:
@@ -440,18 +476,24 @@ class Stickies(QMainWindow):
             self.info_label("info", msg, LabelColor.ERROR.value, self.info_lbl)
 
     def handle_search_query(self):
-        self._clear_selections()
-        query = self.search_ln.text().strip()
+        """This function is bound with the `search` input field
+        and on every input it'll display the stickies that match the query
+        and temporarily remove the rest
+        """
+        matching = []
+        query = self.search_ln.text()
+        stickies = self.model.fetch_all()
         if query:
-            self.stickies_view.selectedItems()
-            for i in range(self.stickies_view.count()):
-                current_item = self.stickies_view.item(i)
-                title = self._get_title_from_item(current_item)
-                if self.search_ln.text() in title:
-                    current_item.setForeground(Qt.GlobalColor.green)
+            self.stickies_view.clear()
+            for sticky in stickies:
+                if query in str(self.model.filter_row([sticky], self.configs.get('search_by'))):
+                    matching.append(sticky)
+            if matching:
+                self.load_stickies(matching)
+            elif not matching:
+                self.stickies_view.addItem(f"<Nothing found matching `{query}`>")
         else:
-            self._clear_selections()
-
+            self._refresh_list()
 
 def gui(args: list, logger: logger.Logger, model: models.Model,
         configs: jsonwrapper.Handler) -> int:
