@@ -1,4 +1,4 @@
-#!/home/mx-linux/Desktop/projects/stickies/.stickyvenv/bin/python
+#!/bin/env python3
 import sys
 from cli.cli import cli
 from pathlib import Path
