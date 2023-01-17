@@ -10,7 +10,7 @@ class LabelColor(Enum):
     WARNING = (243, 183, 18)
 
 
-BASE_DIR = f'{os.sep}'.join(__file__.split(os.sep)[:-2])
+BASE_DIR = str(Path(__file__).parent.parent)
 os.chdir(BASE_DIR)
 
 ICONS = os.listdir(Path(f"{BASE_DIR}/icons"))

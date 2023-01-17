@@ -50,7 +50,8 @@ class Stickies(QMainWindow):
                  configs: jsonwrapper.Handler) -> None:
         super(Stickies, self).__init__()
         uic.loadUi(Stickies.UIFILE, self)
-        self.setWindowIcon(QtGui.QIcon(get_icon['Sticky']))
+        self.app_icon = QtGui.QIcon(get_icon['Sticky'])
+        self.setWindowIcon(self.app_icon)
         self.setWindowTitle(f"Stickies v{VERSIONS[-1]}")
 
         # Utils
@@ -282,6 +283,7 @@ class Stickies(QMainWindow):
         height, width = 300, 300
         layout = QVBoxLayout()
         dialog = QDialog()
+        dialog.setWindowIcon(self.app_icon)
         info_lbl = QLabel(dialog)
 
         dialog.setWindowTitle("Edit settings")
