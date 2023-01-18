@@ -1,9 +1,7 @@
-import os
 import unittest
 from . import Handler
 from pathlib import Path
-
-BASE_DIR = f'{os.sep}'.join(__file__.split(os.sep)[:-1])
+from actions.constants import BASE_DIR
 
 
 class TestHandler(unittest.TestCase):

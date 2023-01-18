@@ -8,7 +8,17 @@ from .note import (
 
 class TestNote(unittest.TestCase):
     def setUp(self) -> None:
-        self.model = Model('test_notes', 'notes/', title='TEXT type UNIQUE', content='TEXT', priority='INTEGER', date_created='TEXT', date_edited='TEXT', done='INTEGER')
+        self.model = Model(
+            'test_notes',
+            'notes/',
+            title='TEXT type UNIQUE',
+            content='TEXT',
+            priority='INTEGER',
+            date_created='TEXT',
+            date_edited='TEXT',
+            done='INTEGER'
+        )
+
         self.note = Note('title', 'test content', 3)
         self.model.create_table()
 

@@ -3,6 +3,7 @@ import unittest
 from .model import Model
 from sqlite3 import OperationalError
 
+
 BASE_DIR = f'{os.sep}'.join(__file__.split(os.sep)[:-1])
 
 
