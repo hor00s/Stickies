@@ -1,4 +1,5 @@
 from datetime import datetime as dt
+from models import Model
 from typing import (
     Union,
     List,
@@ -52,3 +53,7 @@ def sanitize_command(word: str, chars: tuple = ('`',)):
             fixed.append('\\')
         fixed.append(i)
     return ''.join(fixed)
+
+
+def get_total(db_model: Model):
+    return len(db_model.fetch_all())

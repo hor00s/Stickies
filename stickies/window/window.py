@@ -18,6 +18,7 @@ from actions.dbapi import (
     FIELDS,
     DB_VALUES,
     sort_by,
+    get_total,
     sanitize_entry,
     sanitize_command,
 )
@@ -119,9 +120,11 @@ class Stickies(QMainWindow):
         self.content_lbl = self.findChild(QLabel, 'content_lbl')
         self.priority_lbl = self.findChild(QLabel, 'priority_lbl')
         self.info_lbl = self.findChild(QLabel, 'info_lbl')
+        self.total_stickies_lbl = self.findChild(QLabel, 'total_stickies_lbl')
 
         self.search_lbl = self.findChild(QLabel, 'search_lbl')
         self._update_search_lbl()
+        self.total_stickies_lbl.setText(self.get_total_stickes())
 
         self.title_lbl.setStyleSheet(label_style)
         self.content_lbl.setStyleSheet(label_style)
@@ -163,11 +166,15 @@ class Stickies(QMainWindow):
         self.mark_undone_btn.setIcon(QtGui.QIcon(get_icon['markundone']))
         self.refresh_btn.setIcon(QtGui.QIcon(get_icon['refresh']))
 
+    def get_total_stickes(self) -> str:
+        return f"Total: {get_total(self.model)}"
+
     def _refresh_list(self):
         """Empties the whole list of stickies and reloads them
         """
         self.stickies_view.clear()
         self.load_stickies(self.model.fetch_all())
+        self.total_stickies_lbl.setText(self.get_total_stickes())
 
     def _update_search_lbl(self):
         label = "Search:"

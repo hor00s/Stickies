@@ -7,11 +7,15 @@ import jsonwrapper
 from enum import Enum
 from notes.note import Note
 from logger import get_color
-from actions.dbapi import sanitize_entry, sort_by
+from actions.dbapi import (
+    sanitize_entry,
+    get_total,
+    sort_by,
+)
 
 
 # Holds the ammount of documents printed in `help_text` to keep them always synced
-len_docs = 0
+len_docs = -1
 
 
 class HelpTags(Enum):
@@ -81,6 +85,14 @@ class HelpTags(Enum):
         Delete all the stickes that are marked as `done`
     """
 
+    get_total_help = """
+    Command: get_total
+    Params:
+        None
+    Description:
+        Get total stickies saved
+    """
+
     config_restore_help = """
     Command: config_restore
     Params:
@@ -121,7 +133,8 @@ def lines(count: bool = True):
     return '-' * os.get_terminal_size().columns
 
 
-help_text = f"""
+help_text = f"""{get_color('yellow')}
+{lines()}
 {HelpTags.help_add.value}
 {lines()}
 {HelpTags.help_remove.value}
@@ -138,6 +151,8 @@ help_text = f"""
 {lines()}
 {HelpTags.clear_done_help.value}
 {lines()}
+{HelpTags.get_total_help.value}
+{lines()}
 {HelpTags.show_all_help.value}
 {lines()}
 {HelpTags.config_restore_help.value}
@@ -147,7 +162,7 @@ help_text = f"""
 {HelpTags.config_get_help.value}
 {lines()}
 {HelpTags.config_edit_help.value}
-{lines()}"""
+{lines()}{get_color('reset')}"""
 
 
 assert len_docs == len(HelpTags), "An assigned document is not registered in `help_text`"
@@ -324,6 +339,10 @@ class CliInterface(metaclass=MetaInterface):
         self.model.execute(f"DELETE FROM {self.model.name}")
         self.logger.warning(f"All fields are purged. (Total: {len(total)})")
 
+    def get_total(self):
+        total = get_total(self.model)
+        self.logger.info(f"Total stickes saved: {total}")
+
     def config_edit(self):
         try:
             key, value, type_ = self.params['-k'], self.params['-v'], self.params['-t']
@@ -381,6 +400,8 @@ def cli(args: list, model: models.Model, logger: logger.Logger, configs: jsonwra
             interface.set_done()
         case 'set_undone':
             interface.set_undone()
+        case 'get_total':
+            interface.get_total()
         # CONFIG RELATED
         case 'config_edit':
             interface.config_edit()
@@ -392,5 +413,6 @@ def cli(args: list, model: models.Model, logger: logger.Logger, configs: jsonwra
             interface.config_get()
 
         case _:
-            logger.error("Invalid command")
             print(help_text)
+            get_params = f" with flags: `{params}`" if params else ""
+            logger.error(f"Invalid command `{command}`{get_params}")
