@@ -67,6 +67,7 @@ class Stickies(QMainWindow):
         self._load_lists()
 
         # Set up
+        self.refresh_btn.setToolTip("Refresh")
         self.load_stickies(self.model.fetch_all())
         self.priority_ln.setReadOnly(True)
         self.priority_ln.setText('1')

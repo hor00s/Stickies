@@ -1,23 +1,20 @@
 from datetime import datetime as dt
 from models import Model
 from typing import (
-    Union,
     List,
     Tuple,
 )
 
 FIELDS = ('title', 'content', 'priority', 'date_created', 'date_edited', 'done', 'id')
-DB_ROW = Tuple[Union[str, str, int, str, str, int, int]]
-DB_VALUES = List[Tuple[Union[str, str, int, str, str, int, int]]]
+DB_ROW = Tuple[str, str, int, str, str, int, int]
+DB_VALUES = List[DB_ROW]
 
 
-def _as_date(date: str):
+def _as_date(date: str) -> dt:
     return dt.strptime(date, '%d/%m/%Y')
 
 
 def sort_by(sort_method: str, stickies: DB_VALUES, reversed: bool) -> DB_VALUES:
-    assert sort_method in FIELDS, f"Sort by `{sort_method}` is invalid"
-
     sorted_stickies = stickies
     if sort_method == 'title':
         return sorted(sorted_stickies, key=lambda i: i[FIELDS.index('title')],
@@ -36,17 +33,19 @@ def sort_by(sort_method: str, stickies: DB_VALUES, reversed: bool) -> DB_VALUES:
                       reverse=reversed)
     elif sort_method == 'done':
         return sorted(sorted_stickies, key=lambda i: i[FIELDS.index('done')],
-                      reverse=reversed)
+                      reverse=not reversed)
     elif sort_method == 'id':
         return sorted(sorted_stickies, key=lambda i: i[FIELDS.index('id')],
                       reverse=reversed)
+    else:  # sort method does not exist
+        raise ValueError(f"Sory by `{sort_method}` does not exist")
 
 
 def sanitize_entry(entry: str) -> str:
     return entry.strip().replace("'", "''")
 
 
-def sanitize_command(word: str, chars: tuple = ('`',)):
+def sanitize_command(word: str, chars: tuple[str] = ('`',)) -> str:
     fixed = []
     for i in word:
         if i in chars:
@@ -55,5 +54,5 @@ def sanitize_command(word: str, chars: tuple = ('`',)):
     return ''.join(fixed)
 
 
-def get_total(db_model: Model):
+def get_total(db_model: Model) -> int:
     return len(db_model.fetch_all())

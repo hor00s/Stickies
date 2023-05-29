@@ -378,41 +378,24 @@ def cli(args: list, model: models.Model, logger: logger.Logger, configs: jsonwra
     command, params = parser(args)
     interface = CliInterface(params, logger, model, configs)
 
-    match command:
-        case 'help':
-            print(help_text)
+    commands = {
+        'help': lambda: print(help_text),
         # STICKY RELATED
-        case 'show_all':
-            interface.show_all()
-        case 'clear_done':
-            interface.clear_done()
-        case 'purge_all':
-            interface.purge_all()
-        case 'add':
-            interface.add()
-        case 'remove':
-            interface.remove()
-        case 'edit':
-            interface.edit()
-        case 'peek':
-            interface.peek()
-        case 'set_done':
-            interface.set_done()
-        case 'set_undone':
-            interface.set_undone()
-        case 'get_total':
-            interface.get_total()
+        'show_all': interface.show_all,
+        'clear_done': interface.clear_done,
+        'purge_all': interface.purge_all,
+        'add': interface.add,
+        'remove': interface.remove,
+        'edit': interface.edit,
+        'peek': interface.peek,
+        'set_done': interface.set_done,
+        'set_undone': interface.set_undone,
+        'get_total': interface.get_total,
         # CONFIG RELATED
-        case 'config_edit':
-            interface.config_edit()
-        case 'config_restore':
-            interface.config_restore()
-        case 'config_all':
-            interface.config_all()
-        case 'config_get':
-            interface.config_get()
+        'config_edit': interface.config_edit,
+        'config_restore': interface.config_restore,
+        'config_all': interface.config_all,
+        'config_get': interface.config_get,
+    }
 
-        case _:
-            print(help_text)
-            get_params = f" with flags: `{params}`" if params else ""
-            logger.error(f"Invalid command `{command}`{get_params}")
+    commands.get(command, 'help')()

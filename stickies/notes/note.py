@@ -28,7 +28,7 @@ class Note:
         return self.priority
 
     def __bool__(self):
-        return self.content or self.title
+        return bool(self.content)
 
     @property
     def done(self):
