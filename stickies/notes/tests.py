@@ -2,7 +2,7 @@ import unittest
 from models import Model
 from .note import (
     Note,
-    NoteCreationError,
+    StickyCreationError,
 )
 
 
@@ -24,14 +24,14 @@ class TestNote(unittest.TestCase):
 
     def test_content_len_setter(self):
         content = 'a' * Note.MAX_CONTENT_LEN + 'a'
-        with self.assertRaises(NoteCreationError):
+        with self.assertRaises(StickyCreationError):
             _ = Note('title', content, 3)
         content = content[:-1]
         _ = Note('title', content, 3)
 
     def test_title_setter(self):
         title = 'a' * Note.MAX_TITLE_LEN + 'a'
-        with self.assertRaises(NoteCreationError):
+        with self.assertRaises(StickyCreationError):
             _ = Note(title, 'content', 3)
 
         title = title[:-1]
@@ -39,7 +39,7 @@ class TestNote(unittest.TestCase):
 
     def test_priority_setter(self):
         priority = Note.MAX_PRIORITY + 1
-        with self.assertRaises(NoteCreationError):
+        with self.assertRaises(StickyCreationError):
             _ = Note('content', 'title', priority)
         priority = Note.MAX_PRIORITY
         _ = Note('content', 'title', priority)

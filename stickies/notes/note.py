@@ -2,7 +2,7 @@ from copy import copy
 import datetime
 
 
-class NoteCreationError(Exception): ...
+class StickyCreationError(Exception): ...
 
 
 class Note:
@@ -57,23 +57,23 @@ class Note:
     @done.setter
     def done(self, v: int):
         if v not in (0, 1):
-            raise NoteCreationError("`Done` value can only be set to 0 or 1")
+            raise StickyCreationError("`Done` value can only be set to 0 or 1")
         self._done = v
 
     @content.setter
     def content(self, content: str):
         if len(content) > Note.MAX_CONTENT_LEN:
-            raise NoteCreationError("Content of note is too long")
+            raise StickyCreationError("Content of note is too long")
         self._content = content
 
     @title.setter
     def title(self, title: str):
         if not len(title) or len(title) > Note.MAX_TITLE_LEN:
-            raise NoteCreationError("Title is either too long (>50) or invalid")
+            raise StickyCreationError("Title is either too long (>50) or invalid")
         self._title = title
 
     @priority.setter
     def priority(self, priority: int):
         if not 0 < priority <= Note.MAX_PRIORITY:
-            raise NoteCreationError(f"`Priority` can be set between 0 - {Note.MAX_PRIORITY}")
+            raise StickyCreationError(f"`Priority` can be set between 1 - {Note.MAX_PRIORITY}")
         self._priority = priority

@@ -398,4 +398,6 @@ def cli(args: list, model: models.Model, logger: logger.Logger, configs: jsonwra
         'config_get': interface.config_get,
     }
 
-    commands.get(command, 'help')()
+    assert (len(commands) - 1) == len_docs
+    #                     ^^^ because `help` doesn't exist as an command
+    commands.get(command, commands['help'])()

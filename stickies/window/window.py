@@ -1,10 +1,8 @@
 import os
-import time
 import models
 import logger
 import jsonwrapper
 import webbrowser as web
-import threading as thr
 from typing import Generator
 from pathlib import Path
 from notes.note import Note
@@ -25,6 +23,7 @@ from actions.dbapi import (
 from PyQt5.QtCore import (
     Qt,
     QSize,
+    QTimer,
 )
 from PyQt5.QtWidgets import (
     QApplication,
@@ -205,9 +204,8 @@ class Stickies(QMainWindow):
         r, g, b = rgb
         label.setStyleSheet(f"color: rgb({r}, {g}, {b});")
         label.setText(f"[{header.upper()}]: {msg}")
-        time.sleep(seconds)
-        label.setText('')
-        label.setStyleSheet("")
+        label.show()
+        return label
 
     def _add_stickie_fields(self, stickies: DB_VALUES)\
             -> Generator[DB_ROW, None, None]:
@@ -341,10 +339,8 @@ class Stickies(QMainWindow):
         :param seconds: The time that the msg will be shown for, defaults to 3
         :type seconds: int, optional
         """
-        (
-            thr.Thread(target=self._info_label, args=(header, msg, rgb, label, seconds))
-            .start()
-        )
+        label = self._info_label(header, msg, rgb, label, seconds)
+        QTimer.singleShot(seconds * 1000, label.hide)
 
     def load_stickies(self, stickies: DB_VALUES):
         """Loads all the saved stickies from the db and adds the to the GUI
